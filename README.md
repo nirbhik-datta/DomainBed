@@ -15,8 +15,9 @@ For CelebA:
 for NICO:
 1. download from https://pan.baidu.com/s/1yS3vbx788FOtpgY9N_vVIQ password is rpds (NOTE: this requires a Chinese phone number)
 2. Rename the "Animal" and "Vehicle" directories to "animal" and "vehicle"
-3. run ```python nico_preprocessing.py --data_dir <path to your downloaded dataset>```
-4. A few of the image file names are malformed. For example, "vehicle/truck/on_beach/83. filename-img-0989-jpg" should be "vehicle/truck/on_beach/83.jpg". Run ```python nico_misnamed_files.py --data_dir <path to downloaded directory``` to find them all.
-5. Create a NICO directory under your data directory
-6. Add the "animal" and "vehicle" directories 
-7. copy the contents of ood_bench_data_files/NICO into your <data dir>/NICO directory
+3. Under the "animal" and "vehicle" directories add an "images" directory and copy everything in the directory into it. 
+4. Run ```python nico_preprocessing.py --data_dir <path to your downloaded dataset>```
+5. A few of the image file names are malformed. For example, "vehicle/truck/on_beach/83. filename-img-0989-jpg" should be "vehicle/truck/on_beach/83.jpg". Run ```python nico_misnamed_files.py --data_dir <path to downloaded directory``` to find them all.
+6. Create a NICO directory under your data directory
+7. Add the "animal" and "vehicle" directories 
+8. Copy the contents of ood_bench_data_files/NICO into your <data dir>/NICO directory

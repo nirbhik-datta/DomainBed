@@ -18,30 +18,12 @@ def rename_environment_dirs(data_dir, high_level_class):
 
 
 if __name__ == '__main__':
-    splits = ['env_train1.csv', 'env_train2.csv', 'env_val.csv', 'env_test.csv']
-    root = "C:\\Users\\cthrash\\Downloads\\DomainBed-main\\domainbed\\scripts\\data\\NICO"
-    image_root = "C:\\Users\\cthrash\\Downloads\\NICO"
-    for split in splits:
-        split_csv = os.path.join(root, "mixed_split_corrected", split)
-
-        with open(split_csv) as f:
-            reader = csv.reader(f)
-            for img_path, category_name, context_name, superclass in reader:
-                img_path = img_path.replace('\\', '/')
-                full_img_path = os.path.join(image_root, superclass, 'images', img_path)
-                if not os.path.isfile(full_img_path):
-                    print(full_img_path)
-
-
     parser = argparse.ArgumentParser(description='Preprocesses the NICO dataset')
     parser.add_argument('--data_dir', type=str, required=True)
     args = parser.parse_args()
 
     data_dir = args.data_dir
-
-    change_file_names(data_dir, 'vehicle')
-    change_file_names(data_dir, 'animal')
+    
     rename_environment_dirs(data_dir, 'vehicle')
     rename_environment_dirs(data_dir, 'animal')
-
 
