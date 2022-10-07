@@ -921,7 +921,7 @@ class RSC(ERM):
         return {'loss': loss.item()}
 
 class VRex_RSC(ERM):
-    def init(self, input_shape, num_classes, num_domains, hparams):
+    def __init__(self, input_shape, num_classes, num_domains, hparams):
         super(VRex_RSC, self).__init__(input_shape, num_classes, num_domains,
                                   hparams)
         self.register_buffer('update_count', torch.tensor([0]))
