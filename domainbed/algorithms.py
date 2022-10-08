@@ -976,9 +976,17 @@ class VRex_RSC(ERM):
         all_p_muted_again = self.classifier(all_f * mask)
 
         # Equation (5): update
-        loss = F.cross_entropy(all_p_muted_again, all_y)
-        penalty = ((loss - loss.mean()) ** 2).mean()
-        loss = loss + penalty_weight * penalty
+        losses = torch.zeros(len(minibatches))
+        all_logits_idx = 0
+        for i, (x, y) in enumerate(minibatches):
+            logits = all_p_muted_again[all_logits_idx:all_logits_idx + x.shape[0]]
+            all_logits_idx += x.shape[0]
+            nll = F.cross_entropy(logits, y)
+            losses[i] = nll
+
+        mean = losses.mean()
+        penalty = ((losses - mean) ** 2).mean()
+        loss = mean + penalty_weight * penalty
         if self.update_count == self.hparams['vrex_penalty_anneal_iters']:
             # Reset Adam (like IRM), because it doesn't like the sharp jump in
             # gradient magnitudes that happens at this step.
