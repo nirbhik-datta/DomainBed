@@ -980,7 +980,9 @@ class VRex_RSC(ERM):
             mean = losses.mean()
             penalty = ((losses - mean) ** 2).mean()
         else:
+            mean = F.cross_entropy(all_p, all_y)
             penalty = 0.0
+
         loss = mean + penalty_weight * penalty
 
         if self.update_count == self.hparams['vrex_penalty_anneal_iters']:
