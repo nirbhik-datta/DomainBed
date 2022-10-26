@@ -19,6 +19,7 @@ from domainbed import networks
 from domainbed.lib.misc import (
     random_pairs_of_minibatches, ParamDict, MovingAverage, l2_between_dicts
 )
+from domainbed import utilCurrLrn
 
 
 ALGORITHMS = [
@@ -49,6 +50,8 @@ ALGORITHMS = [
     'CAD',
     'CondCAD',
     'ERDG',
+    'VREX_RSC_Ensemble',
+    'VRex_RSC'
 ]
 
 def get_algorithm_class(algorithm_name):
@@ -946,6 +949,8 @@ class VRex_RSC(ERM):
         self.drop_f = (1 - hparams['rsc_f_drop_factor']) * 100
         self.drop_b = (1 - hparams['rsc_b_drop_factor']) * 100
         self.rsc_vrex_toggle = hparams['rsc_vrex_toggle']
+        self.rsc_sched = hparams['rsc_sched']
+        self.vrex_sched = hparams['vrex_sched']
         self.num_classes = num_classes
 
     def update(self, minibatches, unlabeled=None):
@@ -961,12 +966,24 @@ class VRex_RSC(ERM):
         all_f = self.featurizer(all_x)
         # predictions
         all_p = self.classifier(all_f)
-        # VRex penalty
-        if self.update_count >= self.hparams["vrex_penalty_anneal_iters"]:
-            penalty_weight = self.hparams["vrex_lambda"]
-        else:
-            penalty_weight = 1.0
 
+
+        #TEMP VAR - Number of Iterations
+        totalSteps =  5001 # N_STEPS = 5001 hardcoded in datasets.py if no arg provided
+        
+        #RSC DropRate
+        rsc_f_drop_factor = utilCurrLrn.reg_scheduler(self.rsc_sched, 0, self.hparams['rsc_f_drop_factor'], self.update_count, stepThresh = totalSteps, r = 10/totalSteps)
+        self.drop_f = (1 - rsc_f_drop_factor) * 100
+
+        # VRex penalty
+        penalty_weight = utilCurrLrn.reg_scheduler(self.vrex_sched, 0, self.hparams["vrex_lambda"], self.update_count, stepThresh = totalSteps, r = 10/totalSteps)
+
+        # Previous penalty update without scheduling
+        # if self.update_count >= self.hparams["vrex_penalty_anneal_iters"]:
+        #     penalty_weight = self.hparams["vrex_lambda"]
+        # else:
+        #     penalty_weight = 1.0
+                
         # Equation (5): update
         if self.rsc_vrex_toggle:
             losses = torch.zeros(len(minibatches))
@@ -999,6 +1016,8 @@ class VRex_RSC(ERM):
         # Equation (2): compute top-gradient-percentile mask
         percentiles = np.percentile(all_g.cpu(), self.drop_f, axis=1)
         percentiles = torch.Tensor(percentiles)
+        if percentiles.ndim > 1: #Check added due to issue with linear sched. impl
+            percentiles = np.squeeze(percentiles)
         percentiles = percentiles.unsqueeze(1).repeat(1, all_g.size(1))
         mask_f = all_g.lt(percentiles.to(device)).float()
 
