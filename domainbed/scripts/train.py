@@ -158,7 +158,7 @@ def _get_ood_validation_dataloaders(args, dataset, hparams):
     others = (eval_weights, eval_loader_names, in_splits)
     return loaders, others
 
-
+1
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Domain generalization')
     parser.add_argument('--data_dir', type=str)
@@ -248,6 +248,8 @@ if __name__ == "__main__":
     train_loaders, uda_loaders, eval_loaders = loaders
     eval_weights, eval_loader_names, in_splits = others
 
+    n_steps = args.steps or dataset.N_STEPS
+    hparams["max_steps"] = n_steps
     algorithm_class = algorithms.get_algorithm_class(args.algorithm)
     algorithm = algorithm_class(dataset.input_shape, dataset.num_classes,
         len(dataset) - len(args.test_envs) - len(args.val_envs), hparams)
@@ -264,7 +266,6 @@ if __name__ == "__main__":
     steps_per_epoch = min([len(env)/hparams['batch_size'] for env, _ in in_splits
                           if env is not None])
 
-    n_steps = args.steps or dataset.N_STEPS
     checkpoint_freq = args.checkpoint_freq or dataset.CHECKPOINT_FREQ
 
     def save_checkpoint(filename):

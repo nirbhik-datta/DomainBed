@@ -411,6 +411,86 @@ class VREx(ERM):
                 'penalty': penalty.item()}
 
 
+class VREx_test(ERM):
+    """V-REx algorithm from http://arxiv.org/abs/2003.00688"""
+    def __init__(self, input_shape, num_classes, num_domains, hparams):
+        super(VREx_test, self).__init__(input_shape, num_classes, num_domains,
+                                  hparams)
+        self.register_buffer('update_count', torch.tensor([0]))
+        self.domain_classifiers = [networks.Classifier(
+            self.featurizer.n_outputs,
+            num_classes,
+            self.hparams['nonlinear_classifier']) for _ in range(0, num_domains)]
+        self.domain_f = [networks.Featurizer(input_shape, self.hparams) for _ in range(0, num_domains)]
+        for dc in self.domain_classifiers:
+            dc.load_state_dict(self.classifier.state_dict())
+        for f in self.domain_f:
+            f.load_state_dict(self.featurizer.state_dict())
+        self.domain_networks = [nn.Sequential(f, dc) for f, dc in zip(self.domain_f, self.domain_classifiers)]
+
+        self.domain_opt = [torch.optim.Adam(
+                dn.parameters(),
+                lr=self.hparams["lr"],
+                weight_decay=self.hparams['weight_decay']) for dn in self.domain_networks]
+
+    def update(self, minibatches, unlabeled=None):
+        if self.update_count >= self.hparams["vrex_penalty_anneal_iters"]:
+            penalty_weight = self.hparams["vrex_lambda"]
+        else:
+            penalty_weight = 1.0
+
+        nll = 0.
+
+        all_x = torch.cat([x for x, y in minibatches])
+        all_f = self.featurizer(all_x)
+        all_logits = self.classifier(all_f)
+        all_logits_idx = 0
+        losses = torch.zeros(len(minibatches))
+        dc_losses = torch.zeros(len(minibatches))
+        for i, (x, y) in enumerate(minibatches):
+            logits = all_logits[all_logits_idx:all_logits_idx + x.shape[0]]
+            nll = F.cross_entropy(logits, y)
+            losses[i] = nll
+
+            # f = all_f[all_logits_idx:all_logits_idx + x.shape[0]].detach()
+            # dc = self.domain_classifiers[i]
+            # dc_logits = dc(f)
+            dc_logits = self.domain_networks[i](x)
+            dc_nll = F.cross_entropy(dc_logits, y)
+
+            self.domain_opt[i].zero_grad()
+            dc_nll.backward()
+            self.domain_opt[i].step()
+
+            dc_losses[i] = dc_nll.detach()
+
+            all_logits_idx += x.shape[0]
+
+        diffs = (losses - dc_losses)
+        diffs[diffs < 0] = 0
+        diff_mean = diffs.mean()
+        penalty = ((diffs - diff_mean) ** 2).mean()
+        mean = losses.mean()
+        loss = mean + penalty_weight * penalty
+
+        if self.update_count == self.hparams['vrex_penalty_anneal_iters']:
+            # Reset Adam (like IRM), because it doesn't like the sharp jump in
+            # gradient magnitudes that happens at this step.
+            self.optimizer = torch.optim.Adam(
+                self.network.parameters(),
+                lr=self.hparams["lr"],
+                weight_decay=self.hparams['weight_decay'])
+
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+
+        self.update_count += 1
+        return {'loss': loss.item(), 'nll': nll.item(),
+                'penalty': penalty.item()}
+
+
+
 class Mixup(ERM):
     """
     Mixup of minibatches from different domains
@@ -967,22 +1047,25 @@ class VRex_RSC(ERM):
         # predictions
         all_p = self.classifier(all_f)
 
-
-        #TEMP VAR - Number of Iterations
-        totalSteps =  5001 # N_STEPS = 5001 hardcoded in datasets.py if no arg provided
+        totalSteps = self.hparams['max_steps']
         
         #RSC DropRate
-        rsc_f_drop_factor = utilCurrLrn.reg_scheduler(self.rsc_sched, 0, self.hparams['rsc_f_drop_factor'], self.update_count, stepThresh = totalSteps, r = 10/totalSteps)
+        rsc_f_drop_factor = utilCurrLrn.reg_scheduler(self.rsc_sched, 0, self.hparams['rsc_f_drop_factor'],
+                                                      self.update_count, stepThresh=self.hparams['vrex_penalty_anneal_iters'], r=10/totalSteps,
+                                                      invert=self.hparams['rsc_sched_invert'])
         self.drop_f = (1 - rsc_f_drop_factor) * 100
 
-        # VRex penalty
-        penalty_weight = utilCurrLrn.reg_scheduler(self.vrex_sched, 0, self.hparams["vrex_lambda"], self.update_count, stepThresh = totalSteps, r = 10/totalSteps)
+        if self.rsc_sched == 'BINARY' and self.hparams['vrex_penalty_anneal_iters'] == self.update_count:
+            # Reset Adam (like IRM), because it doesn't like the sharp jump in
+            # gradient magnitudes that happens at this step.
+            self.optimizer = torch.optim.Adam(
+                self.network.parameters(),
+                lr=self.hparams["lr"],
+                weight_decay=self.hparams['weight_decay'])
 
-        # Previous penalty update without scheduling
-        # if self.update_count >= self.hparams["vrex_penalty_anneal_iters"]:
-        #     penalty_weight = self.hparams["vrex_lambda"]
-        # else:
-        #     penalty_weight = 1.0
+        # VRex penalty
+        penalty_weight = utilCurrLrn.reg_scheduler(self.vrex_sched, 1.0, self.hparams["vrex_lambda"], self.update_count,
+                                                   stepThresh=self.hparams['vrex_penalty_anneal_iters'], r=10/totalSteps)
                 
         # Equation (5): update
         if self.rsc_vrex_toggle:
@@ -1000,26 +1083,44 @@ class VRex_RSC(ERM):
             mean = F.cross_entropy(all_p, all_y)
             penalty = 0.0
 
-        loss = mean + penalty_weight * penalty
+        if self.hparams['drop_vrex_weights_sep']:
+            vrex_term = penalty_weight * penalty
+            rsc_term = mean
 
-        if self.update_count == self.hparams['vrex_penalty_anneal_iters']:
-            # Reset Adam (like IRM), because it doesn't like the sharp jump in
-            # gradient magnitudes that happens at this step.
-            self.optimizer = torch.optim.Adam(
-                self.network.parameters(),
-                lr=self.hparams["lr"],
-                weight_decay=self.hparams['weight_decay'])
+            # Equation (1): compute gradients with respect to representation
+            all_g_vrex = autograd.grad(vrex_term, all_f, retain_graph=True)[0]
+            all_g_rsc = autograd.grad((rsc_term).sum(), all_f)[0]
 
-        # Equation (1): compute gradients with respect to representation
-        all_g = autograd.grad((loss).sum(), all_f)[0]
 
-        # Equation (2): compute top-gradient-percentile mask
-        percentiles = np.percentile(all_g.cpu(), self.drop_f, axis=1)
-        percentiles = torch.Tensor(percentiles)
-        if percentiles.ndim > 1: #Check added due to issue with linear sched. impl
-            percentiles = np.squeeze(percentiles)
-        percentiles = percentiles.unsqueeze(1).repeat(1, all_g.size(1))
-        mask_f = all_g.lt(percentiles.to(device)).float()
+            # Equation (2): compute top-gradient-percentile mask
+            percentiles = np.percentile(all_g_vrex.cpu(), self.drop_f, axis=1)
+            percentiles = torch.Tensor(percentiles)
+            if percentiles.ndim > 1:  # Check added due to issue with linear sched. impl
+                percentiles = np.squeeze(percentiles)
+            percentiles = percentiles.unsqueeze(1).repeat(1, all_g_vrex.size(1))
+            mask_f_vrex = all_g_vrex.lt(percentiles.to(device)).float()
+
+            percentiles = np.percentile(all_g_rsc.cpu(), self.drop_f, axis=1)
+            percentiles = torch.Tensor(percentiles)
+            if percentiles.ndim > 1:  # Check added due to issue with linear sched. impl
+                percentiles = np.squeeze(percentiles)
+            percentiles = percentiles.unsqueeze(1).repeat(1, all_g_rsc.size(1))
+            mask_f_rsc = all_g_rsc.lt(percentiles.to(device)).float()
+
+            mask_f = mask_f_vrex * mask_f_rsc
+        else:
+            loss = mean + penalty_weight * penalty
+
+            # Equation (1): compute gradients with respect to representation
+            all_g = autograd.grad((loss).sum(), all_f)[0]
+
+            # Equation (2): compute top-gradient-percentile mask
+            percentiles = np.percentile(all_g.cpu(), self.drop_f, axis=1)
+            percentiles = torch.Tensor(percentiles)
+            if percentiles.ndim > 1:  # Check added due to issue with linear sched. impl
+                percentiles = np.squeeze(percentiles)
+            percentiles = percentiles.unsqueeze(1).repeat(1, all_g.size(1))
+            mask_f = all_g.lt(percentiles.to(device)).float()
 
         # Equation (3): mute top-gradient-percentile activations
         all_f_muted = all_f * mask_f

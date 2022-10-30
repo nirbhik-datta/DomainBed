@@ -62,8 +62,10 @@ def _hparams(algorithm, dataset, random_seed):
         _hparam('rsc_vrex_toggle', True, lambda r: True)
         _hparam('vrex_lambda', 1e1, lambda r: 10**r.uniform(-1, 5))
         _hparam('vrex_penalty_anneal_iters', 500, lambda r: int(10**r.uniform(0, 4)))
-        _hparam('rsc_sched','LINEAR',lambda r: 'NONE')
-        _hparam('vrex_sched','LINEAR',lambda r: 'NONE')
+        _hparam('rsc_sched', 'LINEAR',lambda r: 'NONE')
+        _hparam('vrex_sched', 'BINARY',lambda r: 'NONE')
+        _hparam('rsc_sched_invert', False, lambda r: False)
+        _hparam('drop_vrex_weights_sep', True, lambda r: True)
     elif algorithm == "VREX_RSC_Ensemble":
         _hparam('rsc_f_drop_factor', 1 / 3, lambda r: r.uniform(0, 0.5))
         _hparam('rsc_b_drop_factor', 1 / 3, lambda r: r.uniform(0, 0.5))
@@ -97,6 +99,10 @@ def _hparams(algorithm, dataset, random_seed):
         _hparam('vrex_lambda', 1e1, lambda r: 10**r.uniform(-1, 5))
         _hparam('vrex_penalty_anneal_iters', 500,
                 lambda r: int(10**r.uniform(0, 4)))
+    elif algorithm == "VREx_test":
+        _hparam('vrex_lambda', 1e1, lambda r: 10**r.uniform(4, 6))
+        _hparam('vrex_penalty_anneal_iters', 1,
+                lambda r: 1)
 
     elif algorithm == "SD":
         _hparam('sd_reg', 0.1, lambda r: 10**r.uniform(-5, -1))
