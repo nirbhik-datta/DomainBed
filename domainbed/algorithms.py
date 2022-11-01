@@ -1051,7 +1051,7 @@ class VRex_RSC(ERM):
         
         #RSC DropRate
         rsc_f_drop_factor = utilCurrLrn.reg_scheduler(self.rsc_sched, 0, self.hparams['rsc_f_drop_factor'],
-                                                      self.update_count, stepThresh=self.hparams['vrex_penalty_anneal_iters'], r=10/totalSteps,
+                                                      self.update_count, stepThresh=self.hparams['rsc_binary_sched_iters'], r=10/totalSteps,
                                                       invert=self.hparams['rsc_sched_invert'])
         self.drop_f = (1 - rsc_f_drop_factor) * 100
 

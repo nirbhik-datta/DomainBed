@@ -62,8 +62,9 @@ def _hparams(algorithm, dataset, random_seed):
         _hparam('rsc_vrex_toggle', True, lambda r: True)
         _hparam('vrex_lambda', 1e1, lambda r: 10**r.uniform(-1, 5))
         _hparam('vrex_penalty_anneal_iters', 500, lambda r: int(10**r.uniform(0, 4)))
-        _hparam('rsc_sched', 'LINEAR',lambda r: 'NONE')
-        _hparam('vrex_sched', 'BINARY',lambda r: 'NONE')
+        _hparam('rsc_sched', 'NONE', lambda r: 'NONE')
+        _hparam('rsc_binary_sched_iters', 500, lambda r: int(10**r.uniform(0, 4)))
+        _hparam('vrex_sched', 'BINARY', lambda r: 'BINARY')
         _hparam('rsc_sched_invert', False, lambda r: False)
         _hparam('drop_vrex_weights_sep', True, lambda r: True)
     elif algorithm == "VREX_RSC_Ensemble":
