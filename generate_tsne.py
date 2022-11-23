@@ -37,7 +37,7 @@ dataset = vars(datasets)["ColoredMNIST_IRM"]("./data/ColoredMNIST/", [ENV], {"da
 
 ## MODEL PATH
 # model_path = f"/Users/sahilkhose/Downloads/GT/Projects/DomainBed/models/TerraIncognita/env_{ENV}/model.pkl" 
-model_path = f"/Users/sahilkhose/Downloads/GT/Projects/DomainBed/models/CMNIST/model.pkl"
+model_path = f"models/models/CMNIST/model.pkl"
 
 model_params = torch.load(model_path, map_location=torch.device('cpu'))
 
@@ -62,7 +62,7 @@ for env_i, env in enumerate(dataset):
         embeddings = []
         for num_data, (x, y) in enumerate(tqdm(loader)):
             y_pred = model.predict(x)
-            embeddings.append(model.network[0](x).squeeze(0).detach().numpy()) # fetching the feature maps, ERROR could be here? 
+            embeddings.append(model.network[0](x).squeeze(0).detach().numpy()) # fetching the feature maps, ERROR could be here?
             ## Metrics
             all_y.extend(y.detach().numpy().tolist())
             all_y_pred.extend(y_pred.argmax(1).detach().numpy().tolist())
@@ -98,9 +98,10 @@ for env_i, env in enumerate(dataset):
         cmap = cm.get_cmap('tab20')
         fig, ax = plt.subplots(figsize=(8,8))
         num_categories = 10
+        all_y_pred = np.array(all_y_pred)
         for lab in range(num_categories):
             indices = all_y_pred==lab
-            ax.scatter(tsne_proj[indices,0],tsne_proj[indices,1], c=np.array(cmap(lab)).reshape(1,4), label = lab ,alpha=0.5)
+            ax.scatter(tsne_proj[indices, 0], tsne_proj[indices, 1], c=np.array(cmap(lab)).reshape(1, 4), label=lab, alpha=0.5)
         ax.legend(fontsize='large', markerscale=2)
         plt.show()
         # print(confusion_matrix(y_true=all_y, y_pred=all_y_pred))
