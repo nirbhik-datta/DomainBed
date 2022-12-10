@@ -41,7 +41,7 @@ to find them all. You will need to edit the file names manually (should only be 
 
 ## Benchmarking
 ```sh
-sh sweep/$dataset/run.sh <launch|delete_incomplete> <local|multi_gpu> <path to datasets>
+sh sweep/<dataset name>/run.sh <launch|delete_incomplete> <local|multi_gpu> <path to datasets>
 ```
 * launch - execute all training jobs
 * delete_incomplete - remove incomplete training job folders. Necessary if you end the sweep before it completes and 
