@@ -46,7 +46,7 @@ sh sweep/$dataset/run.sh <launch|delete_incomplete> <local|multi_gpu> <path to d
 * launch - execute all training jobs
 * delete_incomplete - remove incomplete training job folders. Necessary if you end the sweep before it completes and 
 wish to continue
-* local - execute a single process at a time. Assumes access to only 1 GPU at most.
+* local - execute a single process at a time. Assumes access to at most 1 GPU.
 * multi_gpu - executes one process per GPU
 
 We also provide a [colab notebook](https://github.com/ChayneThrash/DomainBed/blob/main/DomainBedTesting.ipynb) which is 
