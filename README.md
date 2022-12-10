@@ -6,12 +6,10 @@ algorithm which uses both [V-REx](https://arxiv.org/pdf/2003.00688.pdf) and [RSC
 in an attempt to perform well on both diversity and correlation shift.
 
 ### Current Results
-
-Diversity Shift:
-![Diversity Shift Results](diversity_shift_results.PNG)
-
-Correlation Shift:
-![Correlation Shift Results](correlation_shift_results.PNG)
+Diversity Shift: <br/>
+![Diversity Shift Results](diversity_shift_results.PNG)<br/>
+Correlation Shift:<br/>
+![Correlation Shift Results](correlation_shift_results.PNG)<br/>
 
 If you wish to benchmark our implementation, please follow the instructions below.
 
