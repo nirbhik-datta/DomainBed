@@ -5,7 +5,7 @@ data_dir=$3
 
 python -m domainbed.scripts.sweep ${command}\
        --datasets ${dataset}\
-       --algorithms ERM IRM VREx MMD RSC ARM CORAL SagNet GroupDRO Mixup MLDG DANN MTL ANDMask IGA ERDG\
+       --algorithms VRex_RSC\
        --data_dir ${data_dir}\
        --command_launcher ${launcher}\
        --fixed_val_envs 1\
@@ -15,5 +15,5 @@ python -m domainbed.scripts.sweep ${command}\
        --n_hparams 20\
        --n_trials 3\
        --skip_confirmation\
-       --hparams "$(<sweep/${dataset}/hparams.json)"\
+       --hparams "$(cat sweep/${dataset}/hparams.json)"\
        --output_dir "sweep/${dataset}/outputs"

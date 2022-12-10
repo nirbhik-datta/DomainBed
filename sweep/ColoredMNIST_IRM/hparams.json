@@ -1,1 +1,7 @@
-{}
+{
+    "rsc_vrex_toggle": true,
+    "drop_vrex_weights_sep": true,
+    "rsc_sched": "BINARY",
+    "vrex_sched": "BINARY",
+    "rsc_sched_invert": true
+}

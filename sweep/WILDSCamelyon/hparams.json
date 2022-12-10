@@ -4,5 +4,10 @@
     "resnet_dropout": 0,
     "nonlinear_classifier": false,
     "data_augmentation": true,
-    "data_augmentation_scheme": "jigen"
+    "data_augmentation_scheme": "jigen",
+    "rsc_vrex_toggle": true,
+    "drop_vrex_weights_sep": true,
+    "rsc_sched": "BINARY",
+    "vrex_sched": "BINARY",
+    "rsc_sched_invert": true
 }
